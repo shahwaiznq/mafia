@@ -1,26 +1,51 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { Component } from 'react'
+import firebase, { database } from 'firebase'
+import config from './components/firebase/firebase'
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+} from "react-router-dom";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+import Home from './components/Home';
+import Room from './components/Room';
+
+export const Database = React.createContext(
+  firebase // default value
+);
+
+class App extends Component {
+
+  constructor() {
+    super();
+
+  }
+
+
+  componentDidMount() {
+    if (!firebase.apps.length) {
+      firebase.initializeApp(config);
+    }
+
+    firebase.database().ref().on("value", function(snapshot) {
+      console.log(snapshot.val());
+    }, function (error) {
+      console.log("Error: " + error.code);
+    });
+
+    const Database = React.createContext(firebase);
+  }
+
+  render() {
+    return (
+      <Router>
+        <Switch>
+          <Route component={Home} exact path='/' />
+          <Route component={Room} path='/:name' />
+        </Switch>
+      </Router>
+    )
+  }
 }
 
 export default App;
