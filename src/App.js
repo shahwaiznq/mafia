@@ -1,6 +1,6 @@
-import React, { Component } from 'react'
-import firebase, { database } from 'firebase'
-import config from './components/firebase/firebase'
+import React, { Component } from 'react';
+import firebase from 'firebase';
+import {db} from './components/firebase/firebase';
 import {
   BrowserRouter as Router,
   Switch,
@@ -8,32 +8,24 @@ import {
 } from "react-router-dom";
 
 import Home from './components/Home';
-import Room from './components/Room';
-
-export const Database = React.createContext(
-  firebase // default value
-);
+import Room from './components/Room'
+require('firebase/database');
 
 class App extends Component {
 
   constructor() {
     super();
+    db.ref('/rooms').on("value", function(snapshot) {
+      console.log(snapshot.val());
+   }, function (error) {
+      console.log("Error: " + error.code);
+   });
 
   }
 
 
   componentDidMount() {
-    if (!firebase.apps.length) {
-      firebase.initializeApp(config);
-    }
 
-    firebase.database().ref().on("value", function(snapshot) {
-      console.log(snapshot.val());
-    }, function (error) {
-      console.log("Error: " + error.code);
-    });
-
-    const Database = React.createContext(firebase);
   }
 
   render() {
@@ -41,7 +33,7 @@ class App extends Component {
       <Router>
         <Switch>
           <Route component={Home} exact path='/' />
-          <Route component={Room} path='/:name' />
+          <Route component={Room} path='/:name' database={db} />
         </Switch>
       </Router>
     )

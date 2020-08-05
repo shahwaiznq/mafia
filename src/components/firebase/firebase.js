@@ -1,4 +1,6 @@
-export const config = {
+import firebase from 'firebase'
+
+const config = {
     apiKey: "AIzaSyBNAOj2OFmSB8W9KObvhCr2VB9LdH7fWas",
     authDomain: "mafia-online-1efaf.firebaseapp.com",
     databaseURL: "https://mafia-online-1efaf.firebaseio.com",
@@ -9,4 +11,5 @@ export const config = {
     measurementId: "G-RCVZ728V2M"
 };
 
-export default config;
+export const fire = firebase.initializeApp(config)
+export const db = fire.database();
