@@ -13,20 +13,25 @@ export class Room extends Component {
             rooms: {},
             name: '',
             sendToGame: false,
-            roomRef: db.ref('/rooms')
+            players: []
         }
 
         this.roomCreator = this.roomCreator.bind(this);
         this.roomJoiner = this.roomJoiner.bind(this);
         this.handleChange = this.handleChange.bind(this);
-        this.handleSubmit = this.handleSubmit.bind(this);
+        this.handleJoin = this.handleJoin.bind(this);
         this.loader = this.loader.bind(this);
         this.createRoom = this.createRoom.bind(this);
+        this.playerCreator = this.playerCreator.bind(this);
+
+
 
     }
 
-    handleSubmit = (event) => {
+    handleJoin = (event) => {
         event.preventDefault();
+        this.state.players.push(this.playerCreator(this.state.name));
+        db.ref('/rooms/'+this.state.address+'/players').set(this.state.players);
         this.setState({sendToGame: true});
     }
 
@@ -36,7 +41,9 @@ export class Room extends Component {
 
     createRoom = (event) => {
         event.preventDefault();
-        this.state.roomRef.child(this.state.address).set({ address: this.state.address});
+        db.ref('/rooms').child(this.state.address).set({ address: '/'+this.state.address});
+        db.ref('/rooms/'+this.state.address+'/players').child(0).set(this.playerCreator(this.state.name));
+        db.ref('/rooms/'+this.state.address).child('gameHost').set(this.state.name);
         this.setState({sendToGame: true});
     }
 
@@ -44,7 +51,7 @@ export class Room extends Component {
         return(
             <div>
                 <h1>Create Room</h1>
-                <form onSubmit={this.handleSubmit}>
+                <form onSubmit={this.createRoom}>
                     <label>
                         Player Name: <input type="text" name="name" value={this.state.name} onChange={this.handleChange} />
                     </label>
@@ -58,7 +65,7 @@ export class Room extends Component {
         return(
             <div>
                 <h1>Join Room</h1>
-                <form onSubmit={this.handleSubmit}>
+                <form onSubmit={this.handleJoin}>
                     <label>
                         Player Name: <input type="text" name="name" value={this.state.name} onChange={this.handleChange} />
                     </label>
@@ -70,11 +77,22 @@ export class Room extends Component {
 
     loader = () =>  {
         if (this.state.sendToGame) {
-            return <Game address={this.state.address} name={this.state.name} />;
+            return <Game address={this.state.address} name={this.state.name} players={this.state.players} />;
         } else if (this.state.live) {
+
             return this.roomJoiner();
         } else {
             return this.roomCreator();
+        }
+    }
+
+    playerCreator = (playerName) => {
+        return {
+            name: playerName,
+            role: 'tbc',
+            alive: true,
+            votes: 0,
+            mafiaVotes: 0
         }
     }
 
@@ -89,7 +107,15 @@ export class Room extends Component {
             } else {
                 this.setState({live: false});
             }
+
+            if (this.state.live) {
+                db.ref('rooms/'+this.state.address+'/players').on('value', snapshot => {
+                    this.setState({players: snapshot.val()});
+                });
+            }
         }.bind(this));
+
+
 
     }
 

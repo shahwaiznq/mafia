@@ -15,11 +15,6 @@ class App extends Component {
 
   constructor() {
     super();
-    db.ref('/rooms').on("value", function(snapshot) {
-      console.log(snapshot.val());
-   }, function (error) {
-      console.log("Error: " + error.code);
-   });
 
   }
 
