@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import {db} from './firebase/firebase';
 import Game from './Game'
+import _ from 'lodash'
 require('firebase/database');
 
 export class Room extends Component {
@@ -31,8 +32,10 @@ export class Room extends Component {
 
     handleJoin = (event) => {
         event.preventDefault();
-        this.state.players.push(this.playerCreator(this.state.name));
-        db.ref('/rooms/'+this.state.address+'/players').set(this.state.players);
+        if (_.findIndex(this.state.players, player => player.name === this.state.name) < 0) {
+            this.state.players.push(this.playerCreator(this.state.name));
+            db.ref('/rooms/'+this.state.address+'/players').set(this.state.players);
+        }
         this.setState({sendToGame: true});
     }
 
@@ -53,6 +56,9 @@ export class Room extends Component {
         db.ref('/rooms/'+this.state.address).child('host').set(this.state.name);
         db.ref('/rooms/'+this.state.address).child('started').set(false);
         db.ref('/rooms/'+this.state.address).child('time').set('none');
+        db.ref('/rooms/'+this.state.address).child('healed').set('');
+        db.ref('/rooms/'+this.state.address).child('message').set('');
+
 
         this.setState({sendToGame: true});
     }

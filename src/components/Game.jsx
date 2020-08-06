@@ -23,6 +23,8 @@ export class Game extends Component {
         this.civView = this.civView.bind(this);
         this.spectatorView = this.spectatorView.bind(this);
         this.mafiaVote = this.mafiaVote.bind(this);
+        this.healerVote = this.healerVote.bind(this);
+        this.wipeActions = this.wipeActions.bind(this);
     }
 
     componentDidMount() {
@@ -33,6 +35,43 @@ export class Game extends Component {
             return player.name === this.props.name;
         })
         this.setState({index: playerIndex});
+    }
+
+    componentDidUpdate() {
+        if (
+            _.every(this.props.players, player => {
+                return player.done === true;
+            }) && this.state.host
+        ) {
+            let deadIndex;
+            // NIGHT LOGIC /////////////////////////////////////////////////////
+            if (this.props.room.time === 'night') {
+                let max = _.maxBy(this.props.players, player => { return player.mafiaVotes }).mafiaVotes;
+                let attackIndex = _.findIndex(this.props.players, player => {
+                    return player.mafiaVotes === max;
+                });
+                if (this.props.room.healed === this.props.players[attackIndex].name) {
+                    db.ref('/rooms/'+this.props.address).child('message').set('The doctor made it to the victim in time to save him!');
+                } else {
+                    db.ref('/rooms/'+this.props.address+'/players').child(attackIndex).child('alive').set(false);
+                    deadIndex = attackIndex;
+                    db.ref('/rooms/'+this.props.address).child('message').set(`${this.props.players[attackIndex].name} was killed by the Mafia`);
+                }
+                db.ref('/rooms/'+this.props.address).child('time').set('day');
+
+                // DAY LOGIC ///////////////////////////////////////////////////
+            } else if (this.props.room.time === 'day') {
+                let max = _.maxBy(this.props.players, player => { return player.votes }).votes;
+                let lynchIndex = _.findIndex(this.props.players, player => {
+                    return player.votes === max;
+                }); 
+                db.ref('/rooms/'+this.props.address+'/players').child(lynchIndex).child('alive').set(false);
+                deadIndex = lynchIndex;
+                db.ref('/rooms/'+this.props.address).child('message').set(`${this.props.players[lynchIndex].name} was lynched by the community`);
+                db.ref('/rooms/'+this.props.address).child('time').set('night');
+            }
+            this.wipeActions(deadIndex);
+        }
     }
 
     hostStartGame = () => {
@@ -56,24 +95,10 @@ export class Game extends Component {
         }
         this.props.updatePlayers(playersCopy);
         //////////////////////////////////////////////////////////////
+
         db.ref('/rooms/'+this.props.address).child('time').set('night');
         db.ref('/rooms/'+this.props.address).child('started').set(true);
 
-    }
-
-    hostSetUp = () => {
-        if (this.props.room.started === false) {
-            if (this.state.host) {
-                return (
-                    <>
-                        Number of Mafia: <input type="number" id="mafia-num" onChange={this.handleMafiaNum}/>
-                        <input type="button" onClick={this.hostStartGame} value="Start Game" />
-                    </>
-                )
-            } else {
-                return "Waiting for Host to start game...";
-            }
-        }
     }
 
     handleMafiaNum = (event) => {
@@ -96,8 +121,44 @@ export class Game extends Component {
         db.ref('/rooms/'+this.props.address+'/players').child(voteIndexNew).child('mafiaVotes').set(this.props.players[voteIndexNew].mafiaVotes+1);
     }
 
+    healerVote = (name) => {
+        db.ref('/rooms/'+this.props.address).child('healed').set(name);
+    }
+
+    lynchVote = (name) => {
+        let voteIndexNew = _.findIndex(this.props.players, (player) => {
+            return player.name === name;
+        });
+        let voteIndexOld = _.findIndex(this.props.players, (player) => {
+            return player.name === this.props.players[this.state.index].votingFor;
+        });
+        // Removing old vote
+        if (this.props.players[this.state.index].votingFor) {
+            db.ref('/rooms/'+this.props.address+'/players').child(voteIndexOld).child('votes').set(this.props.players[voteIndexOld].votes-1);
+        }
+        // Adding new vote
+        db.ref('/rooms/'+this.props.address+'/players').child(this.state.index).child('votingFor').set(name);
+        db.ref('/rooms/'+this.props.address+'/players').child(voteIndexNew).child('votes').set(this.props.players[voteIndexNew].votes+1);
+    }
+
     imReady = () => {
         db.ref('/rooms/'+this.props.address+'/players').child(this.state.index).child('done').set(true);
+    }
+
+    wipeActions = (deadIndex) =>  {
+
+        db.ref('/rooms/'+this.props.address).child('healed').set('');
+        for (let i = 0; i < this.props.players.length; i++) {
+            db.ref('/rooms/'+this.props.address+'/players').child(i).child('votes').set(0);
+            db.ref('/rooms/'+this.props.address+'/players').child(i).child('mafiaVotes').set(0);
+            db.ref('/rooms/'+this.props.address+'/players').child(i).child('votingFor').set('');
+            db.ref('/rooms/'+this.props.address+'/players').child(i).child('mafVotingFor').set('');
+            if (i === deadIndex){
+                db.ref('/rooms/'+this.props.address+'/players').child(i).child('done').set(true);
+            } else if (this.props.players[i].alive ) {
+                db.ref('/rooms/'+this.props.address+'/players').child(i).child('done').set(false); 
+            }
+        }
     }
 
     render() {
@@ -111,7 +172,8 @@ export class Game extends Component {
                         )
                     })}
                 </ul>
-
+                
+                <h1>{this.props.room.message}</h1>
 
                 {this.viewController()}
 
@@ -149,17 +211,32 @@ export class Game extends Component {
 
     }
 
+    hostSetUp = () => {
+        if (this.props.room.started === false) {
+            if (this.state.host) {
+                return (
+                    <>
+                        Number of Mafia: <input type="number" id="mafia-num" onChange={this.handleMafiaNum}/>
+                        <input type="button" onClick={this.hostStartGame} value="Start Game" />
+                    </>
+                )
+            } else {
+                return "Waiting for Host to start game...";
+            }
+        }
+    }
+
     mafiaView = () => {
         return (
             <div>
                 <div>
-                    You Are the Mafia
+                    <h1>You are in the Mafia!</h1>
                 </div>
                 <div className="playingfield">
                     {
                         this.props.players.map(player => {
                             return(
-                                <div onClick={() => this.mafiaVote(player.name)} name={player.name}>
+                                <div onClick={() => this.mafiaVote(player.name)} key={player.name}>
                                     <h3>{ player.name }</h3>
                                     <p>{ player.alive ? 'Alive' : 'Dead' }</p>
                                     { player.role == 'mafia' ? <><p>Mafia</p> <p>Voting for: {player.mafVotingFor}</p> <p>{player.done ? 'Locked in' : 'Deciding'}</p></> : '' }
@@ -177,7 +254,23 @@ export class Game extends Component {
     healerView = () => {
         return (
             <div>
-
+                <div>
+                    <h1>You are the Healer!</h1>
+                </div>
+                <div className="playingfield">
+                    {
+                        this.props.players.map(player => {
+                            return(
+                                <div onClick={() => this.healerVote(player.name)} key={player.name}>
+                                    <h3>{ player.name }</h3>
+                                    <p>{ player.alive ? 'Alive' : 'Dead' }</p>
+                                    { player.role == 'healer' ? <><p>Healer</p> <p>Voting for: {this.props.room.healed}</p> <p>{player.done ? 'Locked in' : 'Deciding'}</p></> : '' }
+                                </div>
+                            )
+                        })
+                    }
+                </div>
+                <button onClick={this.imReady}> Ready! </button>
             </div>
         )
     }
@@ -185,7 +278,22 @@ export class Game extends Component {
     copView = () => {
         return (
             <div>
-
+                <div>
+                    <h1>You are the Police Officer!</h1>
+                </div>
+                <div className="playingfield">
+                    {
+                        this.props.players.map(player => {
+                            return(
+                                <div key={player.name}>
+                                    <h3>{ player.name }</h3>
+                                    <p>{ player.alive ? 'Alive' : 'Dead' }</p>
+                                </div>
+                            )
+                        })
+                    }
+                </div>
+                <button onClick={this.imReady}> Ready! </button>
             </div>
         )
     }
@@ -193,7 +301,29 @@ export class Game extends Component {
     civView = () => {
         return (
             <div>
-
+                <div>
+                    <h1>You are a {this.props.players[this.state.index].role}!</h1>
+                </div>
+                <div className="playingfield">
+                    {
+                        this.props.players.map(player => {
+                            return(
+                                <div onClick={() => this.lynchVote(player.name)} key={player.name}>
+                                    <h3>{ player.name }</h3>
+                                    <p>{ player.alive ? 'Alive' : 'Dead' }</p>
+                                    { this.props.room.time === 'day' && player.alive ?
+                                    <>
+                                    <p>Voting for: {player.votingFor}</p>
+                                    <p>{player.done ? 'Locked in' : 'Deciding'}</p>
+                                    <p>Kill votes: {player.votes} </p>
+                                    </> : ''
+                                    }
+                                </div>
+                            )
+                        })
+                    }
+                </div>
+                <button onClick={this.imReady}> Ready! </button>
             </div>
         )
     }
