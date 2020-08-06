@@ -23,6 +23,7 @@ export class Room extends Component {
         this.loader = this.loader.bind(this);
         this.createRoom = this.createRoom.bind(this);
         this.playerCreator = this.playerCreator.bind(this);
+        this.updatePlayers = this.updatePlayers.bind(this);
 
 
 
@@ -39,11 +40,20 @@ export class Room extends Component {
         this.setState({name: event.target.value});
     }
 
+    updatePlayers = (playersArray) => {
+        this.setState({players: playersArray});
+        db.ref('/rooms/'+this.state.address+'/players').set(this.state.players);
+    }
+
     createRoom = (event) => {
         event.preventDefault();
         db.ref('/rooms').child(this.state.address).set({ address: '/'+this.state.address});
-        db.ref('/rooms/'+this.state.address+'/players').child(0).set(this.playerCreator(this.state.name));
-        db.ref('/rooms/'+this.state.address).child('gameHost').set(this.state.name);
+        this.state.players.push(this.playerCreator(this.state.name));
+        db.ref('/rooms/'+this.state.address+'/players').set(this.state.players);
+        db.ref('/rooms/'+this.state.address).child('host').set(this.state.name);
+        db.ref('/rooms/'+this.state.address).child('started').set(false);
+        db.ref('/rooms/'+this.state.address).child('time').set('none');
+
         this.setState({sendToGame: true});
     }
 
@@ -77,7 +87,7 @@ export class Room extends Component {
 
     loader = () =>  {
         if (this.state.sendToGame) {
-            return <Game address={this.state.address} name={this.state.name} players={this.state.players} />;
+            return <Game address={this.state.address} name={this.state.name} players={this.state.players} room={this.state.rooms[this.state.address]} updatePlayers={this.updatePlayers} />;
         } else if (this.state.live) {
 
             return this.roomJoiner();
@@ -92,7 +102,10 @@ export class Room extends Component {
             role: 'tbc',
             alive: true,
             votes: 0,
-            mafiaVotes: 0
+            mafiaVotes: 0,
+            votingFor: '',
+            mafVotingFor: '',
+            done: false
         }
     }
 
