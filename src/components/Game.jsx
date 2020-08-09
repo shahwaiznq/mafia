@@ -24,6 +24,7 @@ export class Game extends Component {
         this.spectatorView = this.spectatorView.bind(this);
         this.mafiaVote = this.mafiaVote.bind(this);
         this.healerVote = this.healerVote.bind(this);
+        this.lynchVote = this.lynchVote.bind(this);
         this.wipeActions = this.wipeActions.bind(this);
     }
 
@@ -315,7 +316,7 @@ export class Game extends Component {
                                     <>
                                     <p>Voting for: {player.votingFor}</p>
                                     <p>{player.done ? 'Locked in' : 'Deciding'}</p>
-                                    <p>Kill votes: {player.votes} </p>
+                                    <p>Lynch votes: {player.votes} </p>
                                     </> : ''
                                     }
                                 </div>
