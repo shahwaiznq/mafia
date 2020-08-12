@@ -58,6 +58,7 @@ export class Room extends Component {
         db.ref('/rooms/'+this.state.address).child('time').set('none');
         db.ref('/rooms/'+this.state.address).child('healed').set('');
         db.ref('/rooms/'+this.state.address).child('message').set('');
+        db.ref('/rooms/'+this.state.address).child('gameover').set(false);
 
 
         this.setState({sendToGame: true});

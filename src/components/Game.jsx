@@ -10,14 +10,17 @@ export class Game extends Component {
         this.state = {
             index: null,
             host: false,
-            mafiaNum: 0
+            mafiaNum: 0,
+            copchecked: ''
         }
 
+        this.indexFinder = this.indexFinder.bind(this);
         this.hostStartGame = this.hostStartGame.bind(this);
         this.hostSetUp = this.hostSetUp.bind(this);
         this.handleMafiaNum = this.handleMafiaNum.bind(this);
         this.viewController = this.viewController.bind(this);
         this.copView = this.copView.bind(this);
+        this.checkView = this.checkView.bind(this);
         this.healerView = this.healerView.bind(this);
         this.mafiaView = this.mafiaView.bind(this);
         this.civView = this.civView.bind(this);
@@ -73,6 +76,19 @@ export class Game extends Component {
             }
             this.wipeActions(deadIndex);
         }
+        if (
+            _.every(this.props.players, player => {
+                return player.done === true;
+            }) && this.props.players[this.state.index].role === 'cop' ) {
+                this.setState({copchecked: ''});
+            }
+    }
+
+    indexFinder = (name) => {
+        let index = _.findIndex(this.props.players, player => {
+            return player.name === name;
+        }); 
+        return index;
     }
 
     hostStartGame = () => {
@@ -104,6 +120,10 @@ export class Game extends Component {
 
     handleMafiaNum = (event) => {
         this.setState({mafiaNum: event.target.value});
+    }
+
+    investigate = (name) => {
+        this.setState({ copchecked: name });
     }
 
     mafiaVote = (name) => {
@@ -176,7 +196,7 @@ export class Game extends Component {
                 
                 <h1>{this.props.room.message}</h1>
 
-                {this.viewController()}
+                {this.state.copchecked ? this.checkView() : this.viewController()}
 
                 {this.hostSetUp()}
             </div>
@@ -281,12 +301,13 @@ export class Game extends Component {
             <div>
                 <div>
                     <h1>You are the Police Officer!</h1>
+                    <h3>Click a player to investigate them:</h3>
                 </div>
                 <div className="playingfield">
                     {
                         this.props.players.map(player => {
                             return(
-                                <div key={player.name}>
+                                <div onClick={() => this.investigate(player.name)} key={player.name}>
                                     <h3>{ player.name }</h3>
                                     <p>{ player.alive ? 'Alive' : 'Dead' }</p>
                                 </div>
@@ -294,6 +315,17 @@ export class Game extends Component {
                         })
                     }
                 </div>
+            </div>
+        )
+    }
+
+    checkView = () => {
+        return (
+            <div className="checkview">
+                <h2>You investigated {this.state.copchecked}</h2>
+                <h1>They ARE {
+                    this.props.players[this.indexFinder(this.state.copchecked)].role === 'mafia' ? '' : 'NOT'
+                } Mafia</h1>
                 <button onClick={this.imReady}> Ready! </button>
             </div>
         )
