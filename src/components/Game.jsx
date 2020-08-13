@@ -11,11 +11,15 @@ export class Game extends Component {
             index: null,
             host: false,
             mafiaNum: 0,
-            copchecked: ''
+            copchecked: '',
+            winner: ''
         }
 
         this.indexFinder = this.indexFinder.bind(this);
+        this.numOfMafiaLeft = this.numOfMafiaLeft.bind(this);
+        this.numOfCivLeft = this.numOfCivLeft.bind(this);
         this.hostStartGame = this.hostStartGame.bind(this);
+        this.gameSetUp = this.gameSetUp.bind(this);
         this.hostSetUp = this.hostSetUp.bind(this);
         this.handleMafiaNum = this.handleMafiaNum.bind(this);
         this.viewController = this.viewController.bind(this);
@@ -25,11 +29,24 @@ export class Game extends Component {
         this.mafiaView = this.mafiaView.bind(this);
         this.civView = this.civView.bind(this);
         this.spectatorView = this.spectatorView.bind(this);
+        this.endView = this.endView.bind(this);
         this.mafiaVote = this.mafiaVote.bind(this);
         this.healerVote = this.healerVote.bind(this);
         this.lynchVote = this.lynchVote.bind(this);
         this.wipeActions = this.wipeActions.bind(this);
+        this.restart = this.restart.bind(this);
+        this.deleteRoom = this.deleteRoom.bind(this);
     }
+
+ //   ___       ________  ________  ___  ________     
+ //   |\  \     |\   __  \|\   ____\|\  \|\   ____\    
+ //   \ \  \    \ \  \|\  \ \  \___|\ \  \ \  \___|    
+ //    \ \  \    \ \  \\\  \ \  \  __\ \  \ \  \       
+ //     \ \  \____\ \  \\\  \ \  \|\  \ \  \ \  \____  
+ //      \ \_______\ \_______\ \_______\ \__\ \_______\
+ //       \|_______|\|_______|\|_______|\|__|\|_______|
+                                                     
+                                                    
 
     componentDidMount() {
         if (this.props.room.host === this.props.name) {
@@ -75,6 +92,14 @@ export class Game extends Component {
                 db.ref('/rooms/'+this.props.address).child('time').set('night');
             }
             this.wipeActions(deadIndex);
+            if (this.numOfMafiaLeft() >= this.numOfCivLeft() ) {
+                db.ref('/rooms/'+this.state.address).child('gameover').set(true);
+                this.setState({winner: 'Mafia'});
+            }
+            if (this.numOfMafiaLeft() === 0 ) {
+                db.ref('/rooms/'+this.state.address).child('gameover').set(true);
+                this.setState({winner: 'Civilians'});
+            }
         }
         if (
             _.every(this.props.players, player => {
@@ -89,6 +114,20 @@ export class Game extends Component {
             return player.name === name;
         }); 
         return index;
+    }
+
+    numOfMafiaLeft = () => {
+        let mafia = _.filter(this.props.players, (player) => {
+            player.role === 'mafia'
+        });
+        return mafia.length;
+    }
+
+    numOfCivLeft = () => {
+        let civ = _.filter(this.props.players, (player) => {
+            player.role !== 'mafia'
+        });
+        return civ.length;
     }
 
     hostStartGame = () => {
@@ -122,6 +161,17 @@ export class Game extends Component {
         this.setState({mafiaNum: event.target.value});
     }
 
+
+
+//   ________  ________ _________  ___  ________  ________   ________      
+//   |\   __  \|\   ____\\___   ___\\  \|\   __  \|\   ___  \|\   ____\     
+//   \ \  \|\  \ \  \___\|___ \  \_\ \  \ \  \|\  \ \  \\ \  \ \  \___|_    
+//    \ \   __  \ \  \       \ \  \ \ \  \ \  \\\  \ \  \\ \  \ \_____  \   
+//     \ \  \ \  \ \  \____   \ \  \ \ \  \ \  \\\  \ \  \\ \  \|____|\  \  
+//      \ \__\ \__\ \_______\  \ \__\ \ \__\ \_______\ \__\\ \__\____\_\  \ 
+//       \|__|\|__|\|_______|   \|__|  \|__|\|_______|\|__| \|__|\_________\
+//                                                              \|_________|
+                                                                            
     investigate = (name) => {
         this.setState({ copchecked: name });
     }
@@ -166,6 +216,19 @@ export class Game extends Component {
         db.ref('/rooms/'+this.props.address+'/players').child(this.state.index).child('done').set(true);
     }
 
+    restart = () => {
+        for (let pIndex = 0; pIndex < this.props.players.length; pIndex++) {
+            db.ref('/rooms/'+this.props.address+'/players').child(pIndex).child('alive').set(true); 
+        }
+        if (this.state.host) {
+            this.hostStartGame();
+        }
+    }
+
+    deleteRoom = () => {
+
+    }
+
     wipeActions = (deadIndex) =>  {
 
         db.ref('/rooms/'+this.props.address).child('healed').set('');
@@ -185,14 +248,8 @@ export class Game extends Component {
     render() {
         return (
             <div>
-                <ul>
-                    Player List:
-                    {this.props.players.map(player => {
-                        return (
-                            <li key={player.name}> {player.name} </li>
-                        )
-                    })}
-                </ul>
+
+                {this.gameSetUp()}
                 
                 <h1>{this.props.room.message}</h1>
 
@@ -203,7 +260,15 @@ export class Game extends Component {
         )
     }
 
-// VIEWS //////////////////////////////////////////////////////// 
+
+//    ___      ___ ___  _______   ___       __   ________      
+//    |\  \    /  /|\  \|\  ___ \ |\  \     |\  \|\   ____\     
+//    \ \  \  /  / | \  \ \   __/|\ \  \    \ \  \ \  \___|_    
+//     \ \  \/  / / \ \  \ \  \_|/_\ \  \  __\ \  \ \_____  \   
+//      \ \    / /   \ \  \ \  \_|\ \ \  \|\__\_\  \|____|\  \  
+//       \ \__/ /     \ \__\ \_______\ \____________\____\_\  \ 
+//        \|__|/       \|__|\|_______|\|____________|\_________\
+//                                                  \|_________|
 
     viewController = () => {
         if (this.props.room.started === true) {
@@ -228,8 +293,28 @@ export class Game extends Component {
                 return this.spectatorView();
             }
 
+        } else {
+
         }
 
+    }
+
+    gameSetUp = () => {
+        if (this.props.room.started === false) {
+            return (
+                <div className="setupgame">
+                    <ul>
+                        Player List:
+                        {this.props.players.map(player => {
+                            return (
+                                <li key={player.name}> {player.name} </li>
+                            )
+                        })}
+                    </ul>
+                    {this.hostSetUp()}
+                </div>
+            )
+        }
     }
 
     hostSetUp = () => {
@@ -369,6 +454,31 @@ export class Game extends Component {
         )
     }
 
+
+    endView = () => {
+        return (
+            <div>
+                <div>
+                    <h1>GAME OVER</h1>
+                    <h2>{this.state.winner} Win!</h2>
+                </div>
+                <div className="playingfield">
+                    {
+                        this.props.players.map(player => {
+                            return(
+                                <div key={player.name}>
+                                    <h3>{ player.name }</h3>
+                                    <p>{ player.alive ? 'Alive' : 'Dead' }</p>
+                                    <p>{ player.role }</p>
+                                </div>
+                            )
+                        })
+                    }
+                </div>
+                <button onClick={this.restart}> Restart </button>
+            </div>
+        )
+    }
 
 }
 

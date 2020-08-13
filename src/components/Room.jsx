@@ -144,7 +144,7 @@ export class Room extends Component {
         return (
 
             <div>
-                <h1>Game Room</h1>
+                <h1 className="pagetitle">Mafia</h1>
                 <h2>Room name: {this.state.address}</h2>
                 { this.loader() }
             </div>
