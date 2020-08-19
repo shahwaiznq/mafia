@@ -344,7 +344,7 @@ export class Game extends Component {
                                 <div onClick={() => this.mafiaVote(player.name)} key={player.name}>
                                     <h3>{ player.name }</h3>
                                     <p>{ player.alive ? 'Alive' : 'Dead' }</p>
-                                    { player.role == 'mafia' ? <><p>Mafia</p> <p>Voting for: {player.mafVotingFor}</p> <p>{player.done ? 'Locked in' : 'Deciding'}</p></> : '' }
+                                    { player.role === 'mafia' ? <><p>Mafia</p> <p>Voting for: {player.mafVotingFor}</p> <p>{player.done ? 'Locked in' : 'Deciding'}</p></> : '' }
                                     { player.role !== 'mafia' ? <p>Kill votes: {player.mafiaVotes} </p> : '' }
                                 </div>
                             )
@@ -369,7 +369,7 @@ export class Game extends Component {
                                 <div onClick={() => this.healerVote(player.name)} key={player.name}>
                                     <h3>{ player.name }</h3>
                                     <p>{ player.alive ? 'Alive' : 'Dead' }</p>
-                                    { player.role == 'healer' ? <><p>Healer</p> <p>Voting for: {this.props.room.healed}</p> <p>{player.done ? 'Locked in' : 'Deciding'}</p></> : '' }
+                                    { player.role === 'healer' ? <><p>Healer</p> <p>Voting for: {this.props.room.healed}</p> <p>{player.done ? 'Locked in' : 'Deciding'}</p></> : '' }
                                 </div>
                             )
                         })
