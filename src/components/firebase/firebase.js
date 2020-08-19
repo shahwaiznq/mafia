@@ -1,7 +1,7 @@
 import firebase from 'firebase'
 
 const config = {
-    apiKey: "AIzaSyBNAOj2OFmSB8W9KObvhCr2VB9LdH7fWas",
+    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: "mafia-online-1efaf.firebaseapp.com",
     databaseURL: "https://mafia-online-1efaf.firebaseio.com",
     projectId: "mafia-online-1efaf",

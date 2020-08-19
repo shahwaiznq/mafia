@@ -118,14 +118,14 @@ export class Game extends Component {
 
     numOfMafiaLeft = () => {
         let mafia = _.filter(this.props.players, (player) => {
-            player.role === 'mafia'
+            return player.role === 'mafia'
         });
         return mafia.length;
     }
 
     numOfCivLeft = () => {
         let civ = _.filter(this.props.players, (player) => {
-            player.role !== 'mafia'
+            return player.role !== 'mafia'
         });
         return civ.length;
     }
@@ -255,7 +255,6 @@ export class Game extends Component {
 
                 {this.state.copchecked ? this.checkView() : this.viewController()}
 
-                {this.hostSetUp()}
             </div>
         )
     }
